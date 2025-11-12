@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sed:*)",
+      "Bash(find:*)",
+      "Bash(cargo test:*)",
+      "Bash(./compare_parsers.sh:*)",
+      "Bash(/tmp/test_cache.arr)",
+      "Bash(cargo run:*)",
+      "Bash(time cargo test:*)",
+      "Bash(rustc +nightly -Zprint-type-sizes --crate-type lib:*)",
+      "Bash(tokei:*)",
+      "WebSearch",
+      "WebFetch(domain:iliabylich.github.io)",
+      "WebFetch(domain:oxc.rs)"
+    ],
+    "additionalDirectories": [
+      "/Users/jimmyhmiller/Documents/Code/open-source/pyret-lang"
+    ]
+  }
+}

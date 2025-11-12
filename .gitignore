@@ -1,0 +1,12 @@
+# Rust
+/target
+Cargo.lock
+**/*.rs.bk
+*.pdb
+
+# Pyret AST cache
+bulk_test_results/
+
+# Node.js
+node_modules/
+pyret-json/node_modules/
