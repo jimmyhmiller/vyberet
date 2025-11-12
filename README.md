@@ -9,7 +9,7 @@ This was pretty much entirely vibe coded with claude. If there is some nonsense 
 
 The goal of this project was to see how far I could take a very hands-off vibe coding approach to make a non-trivial piece of software. But what I've found over and over again with vibe coding is it struggles with anything new. Having an oracle is quite effective of a constraint on claude to make it not simply cheat (most of the time). So I vibe coded a pyret ast-to-json file in pyret. This was test over and over again against this. 
 
-Does it all work? It seems to, but I'm sure it is missing a lot trivial things. I have not at all tested its error messages. When I handed it to @tekknolagi he immediately found that even an example of pyret from the home page didn't parse.
+Does it all work? It seems to, but I'm sure it is missing a lot trivial things. I have not at all tested its error messages. When I handed it to [@tekknolagi](https://github.com/tekknolagi) he immediately found that even an example of pyret from the home page didn't parse.
 
 There is a last minute, thrown in "compiler" to scheme just to test the ast stuff. Probably could be expanded to something more.
 
