@@ -1881,6 +1881,27 @@ end
     );
 }
 
+#[test]
+fn test_x() {
+    assert_matches_pyret(
+        r#"
+flag = image-url("https://.../pyret-sticker-caps.png")
+blackout = rectangle(550, 425, "solid", "black")
+blank-flag = place-image(blackout, 450, 285, flag)
+bonnie = scale(0.75, image-url("https://.../pyret-logo.png"))
+fun draw-bonnie(angle :: Number) -> Image:
+  scale(0.5, place-image(rotate(angle, bonnie), 450, 285, blank-flag))
+end
+spinner = reactor:
+  init: 0,
+  on-tick: {(angle): angle + 5},
+  to-draw: draw-bonnie
+end
+spinner.interact()
+"#,
+    );
+}
+
 // ----------------------------------------------------------------------------
 // 9. Include From with Type (from bulk test analysis)
 // ----------------------------------------------------------------------------
