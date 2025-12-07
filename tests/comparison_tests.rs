@@ -3562,3 +3562,76 @@ fn test_full_file_regression_table_reduce() {
     let code = include_str!("pyret-files/full-files/table-reduce.arr");
     assert_matches_pyret(code);
 }
+
+// ============================================================================
+// Tests from the pyret.org front page
+// ============================================================================
+
+#[test]
+fn test_bonnie_spinner() {
+    assert_matches_pyret(
+        r#"
+flag = image-url("https://.../pyret-sticker-caps.png")
+blackout = rectangle(550, 425, "solid", "black")
+blank-flag = place-image(blackout, 450, 285, flag)
+bonnie = scale(0.75, image-url("https://.../pyret-logo.png"))
+fun draw-bonnie(angle :: Number) -> Image:
+  scale(0.5, place-image(rotate(angle, bonnie), 450, 285, blank-flag))
+end
+spinner = reactor:
+  init: 0,
+  on-tick: {(angle): angle + 5},
+  to-draw: draw-bonnie
+end
+spinner.interact()
+"#,
+    );
+}
+
+#[test]
+fn test_treetop() {
+    assert_matches_pyret(
+        r#"
+treetop = triangle(60, "solid", "darkgreen")
+trunk = square(20, "solid", "brown")
+tree = above(treetop, trunk)
+"#,
+    );
+}
+
+#[test]
+fn test_for_loop() {
+    assert_matches_pyret(
+        r#"
+for each(n from range(0, 10)):
+  print(n)
+end
+squares = for map(n from range(0, 5)):
+  n * n
+end
+# for filter, fold, and more!
+"#,
+    );
+}
+
+#[test]
+fn test_import_url() {
+    assert_matches_pyret(
+        r#"
+import url("https://raw.githubusercontent.com/brownplt/pyret.org/...") as TTT
+
+X = TTT.X
+O = TTT.O
+Blank = TTT.Blank
+
+board-xox =
+TTT.board(
+    [array:
+    [array: X, Blank, Blank],
+    [array: Blank, O, Blank],
+    [array: Blank, Blank, X]])
+
+TTT.draw-board(board-xox)
+"#,
+    );
+}
