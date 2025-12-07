@@ -28,6 +28,14 @@ pub enum ParseError {
 
     #[error("Parse error at {location}: {message}")]
     General { location: String, message: String },
+
+    #[error("Operators of different kinds cannot be mixed at the same level: `{op_a}` at {loc_a} cannot be mixed with `{op_b}` at {loc_b}. Use parentheses to group the operations.")]
+    MixedBinops {
+        op_a: String,
+        loc_a: String,
+        op_b: String,
+        loc_b: String,
+    },
 }
 
 impl ParseError {
@@ -58,6 +66,20 @@ impl ParseError {
         ParseError::General {
             location: format_location(token),
             message: message.to_string(),
+        }
+    }
+
+    pub fn mixed_binops(
+        op_a: &str,
+        loc_a: &Token,
+        op_b: &str,
+        loc_b: &Token,
+    ) -> Self {
+        ParseError::MixedBinops {
+            op_a: op_a.to_string(),
+            loc_a: format_location(loc_a),
+            op_b: op_b.to_string(),
+            loc_b: format_location(loc_b),
         }
     }
 }

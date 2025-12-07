@@ -271,9 +271,18 @@ fn test_parse_left_associative() {
 
 #[test]
 fn test_parse_multiple_operators() {
-    let expr = parse_expr("x + y * z").expect("Failed to parse");
+    // Pyret does not allow mixing different operators without parentheses
+    // This test now verifies that mixing operators fails correctly
+    let result = parse_expr("x + y * z");
+    assert!(
+        result.is_err(),
+        "Should fail: cannot mix + and * without parentheses"
+    );
 
-    // With flat precedence and left-associativity, this should be (x + y) * z
+    // But with parentheses, it should work
+    let expr = parse_expr("(x + y) * z").expect("Failed to parse with parentheses");
+
+    // With parentheses, the outer operator should be Times
     match expr {
         Expr::SOp { op, .. } => {
             assert_eq!(op, BinOp::Times);
@@ -1832,4 +1841,81 @@ fn test_parse_provide_block() {
             // Both are acceptable as long as it parses without error
         }
     }
+}
+
+// ============================================================================
+// SECTION: Mixed Operator Tests
+// ============================================================================
+
+#[test]
+fn test_mixed_operators_plus_times() {
+    // Test: 2 + 3 * 4 should fail
+    let result = parse_expr("2 + 3 * 4");
+    assert!(result.is_err(), "Should fail: mixing + and *");
+    let err_msg = format!("{:?}", result.unwrap_err());
+    assert!(err_msg.contains("MixedBinops"), "Expected MixedBinops error");
+    assert!(err_msg.contains("+"), "Error should mention + operator");
+    assert!(err_msg.contains("*"), "Error should mention * operator");
+}
+
+#[test]
+fn test_mixed_operators_times_plus() {
+    // Test: 2 * 3 + 4 should fail
+    let result = parse_expr("2 * 3 + 4");
+    assert!(result.is_err(), "Should fail: mixing * and +");
+}
+
+#[test]
+fn test_mixed_operators_multiple() {
+    // Test: 1 + 2 - 3 should fail (mixing + and -)
+    let result = parse_expr("1 + 2 - 3");
+    assert!(result.is_err(), "Should fail: mixing + and -");
+}
+
+#[test]
+fn test_mixed_operators_comparison() {
+    // Test: 1 < 2 > 3 should fail (mixing < and >)
+    let result = parse_expr("1 < 2 > 3");
+    assert!(result.is_err(), "Should fail: mixing < and >");
+}
+
+#[test]
+fn test_same_operator_chain() {
+    // Test: 1 + 2 + 3 + 4 should succeed (all same operator)
+    let result = parse_expr("1 + 2 + 3 + 4");
+    assert!(result.is_ok(), "Should succeed: all + operators");
+}
+
+#[test]
+fn test_same_operator_multiplication() {
+    // Test: 2 * 3 * 4 should succeed (all same operator)
+    let result = parse_expr("2 * 3 * 4");
+    assert!(result.is_ok(), "Should succeed: all * operators");
+}
+
+#[test]
+fn test_parentheses_allow_mixing() {
+    // Test: (2 + 3) * 4 should succeed (parentheses group operations)
+    let result = parse_expr("(2 + 3) * 4");
+    assert!(
+        result.is_ok(),
+        "Should succeed: parentheses separate operators"
+    );
+}
+
+#[test]
+fn test_nested_parentheses_mixing() {
+    // Test: 2 * (3 + 4) should succeed
+    let result = parse_expr("2 * (3 + 4)");
+    assert!(
+        result.is_ok(),
+        "Should succeed: parentheses separate operators"
+    );
+}
+
+#[test]
+fn test_complex_valid_expression() {
+    // Test: (1 + 2 + 3) * (4 * 5) should succeed
+    let result = parse_expr("(1 + 2 + 3) * (4 * 5)");
+    assert!(result.is_ok(), "Should succeed: properly grouped");
 }

@@ -414,7 +414,14 @@ impl Parser {
             // Try to parse a statement
             match self.parse_block_statement() {
                 Ok(stmt) => stmts.push(Box::new(stmt)),
-                Err(_) => break, // Stop if we can't parse
+                Err(e) => {
+                    // Check if this is a validation error (like mixed binops) that should propagate
+                    // vs. a parse error that just means we're done parsing statements
+                    match &e {
+                        ParseError::MixedBinops { .. } => return Err(e),
+                        _ => break, // Stop if we can't parse
+                    }
+                }
             }
         }
 
@@ -1669,6 +1676,12 @@ impl Parser {
             };
         }
 
+        // Validate that all operators in the expression chain are the same
+        // This needs to be done before check operators to catch mixed binary operators
+        if matches!(left, Expr::SOp { .. }) {
+            self.check_mixed_operators(&left, None)?;
+        }
+
         // Check for check operators (is, raises, satisfies, violates)
         // These have lower precedence than binary operators
         if self.is_check_op() {
@@ -1893,6 +1906,9 @@ impl Parser {
                 right: Box::new(right),
             };
         }
+
+        // Validate that all operators in the expression chain are the same
+        self.check_mixed_operators(&left, None)?;
 
         Ok(left)
     }
@@ -4976,6 +4992,61 @@ impl Parser {
             Ok(Name::SUnderscore { l: loc })
         } else {
             Ok(self.token_to_name(&token))
+        }
+    }
+
+    /// Validate that all operators in an expression chain are the same operator.
+    /// This implements Pyret's rule that operators of different kinds cannot be mixed
+    /// at the same level without parentheses.
+    ///
+    /// Returns the first operator found and its location token for error reporting.
+    fn check_mixed_operators(&self, expr: &Expr, expected_op: Option<(BinOp, Loc)>) -> ParseResult<()> {
+        match expr {
+            Expr::SOp { op, op_l, left, right, .. } => {
+                // Check if this operator matches the expected operator
+                if let Some((expected, expected_loc)) = expected_op {
+                    if *op != expected {
+                        // Different operators found - create error with proper formatting
+                        // Report operators in source order (whichever appears first)
+                        let (op_a, loc_a, op_b, loc_b) = if expected_loc.start_char < op_l.start_char {
+                            (expected, expected_loc, *op, *op_l)
+                        } else {
+                            (*op, *op_l, expected, expected_loc)
+                        };
+
+                        let op_a_name = op_a.as_str().strip_prefix("op").unwrap_or(op_a.as_str());
+                        let op_b_name = op_b.as_str().strip_prefix("op").unwrap_or(op_b.as_str());
+
+                        // Create dummy tokens for error reporting
+                        let tok_a = Token {
+                            token_type: TokenType::Name,
+                            value: String::new(),
+                            location: loc_a,
+                        };
+                        let tok_b = Token {
+                            token_type: TokenType::Name,
+                            value: String::new(),
+                            location: loc_b,
+                        };
+
+                        return Err(ParseError::mixed_binops(
+                            op_a_name,
+                            &tok_a,
+                            op_b_name,
+                            &tok_b,
+                        ));
+                    }
+                }
+
+                // Recursively check left and right subtrees with this operator as expected
+                let current_op = (*op, *op_l);
+                self.check_mixed_operators(left, Some(current_op))?;
+                self.check_mixed_operators(right, Some(current_op))?;
+
+                Ok(())
+            }
+            // For non-operator expressions, we don't need to check
+            _ => Ok(())
         }
     }
 }

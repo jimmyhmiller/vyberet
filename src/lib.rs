@@ -32,6 +32,7 @@
 pub mod ast;
 pub mod codegen;
 pub mod error;
+pub mod module_compiler;
 pub mod parser;
 pub mod pyret_json;
 pub mod tokenizer;
@@ -40,5 +41,6 @@ pub mod tokenizer;
 pub use ast::*;
 pub use codegen::SchemeCompiler;
 pub use error::{ParseError, ParseResult};
+pub use module_compiler::ModuleCompiler;
 pub use parser::Parser;
 pub use tokenizer::Tokenizer;

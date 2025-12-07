@@ -17,6 +17,7 @@ use std::collections::HashMap;
 pub struct FileId(pub u32);
 
 /// Registry for mapping file IDs to filenames
+#[derive(Clone)]
 pub struct FileRegistry {
     files: HashMap<FileId, String>,
     next_id: u32,
@@ -42,6 +43,10 @@ impl FileRegistry {
         self.next_id += 1;
         self.files.insert(id, filename);
         id
+    }
+
+    pub fn get_filename(&self, file_id: FileId) -> Option<&String> {
+        self.files.get(&file_id)
     }
 
     /// Get the filename for a file ID

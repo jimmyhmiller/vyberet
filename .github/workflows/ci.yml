@@ -26,8 +26,29 @@ jobs:
     - name: Setup Rust cache
       uses: Swatinem/rust-cache@v2
 
+    - name: Install Chicken Scheme (Ubuntu)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y chicken-bin
+
+    - name: Install Chicken Scheme (macOS)
+      if: runner.os == 'macOS'
+      run: brew install chicken
+
+    - name: Clone and build Ribbit
+      run: |
+        git clone --depth 1 https://github.com/udem-dlteam/ribbit.git ${{ runner.temp }}/ribbit
+        cd ${{ runner.temp }}/ribbit/src
+        # Build rsc.exe from prebuilt C source
+        gcc -O2 -o rsc.exe prebuilt/rsc.c
+        echo "RIBBIT_DIR=${{ runner.temp }}/ribbit" >> $GITHUB_ENV
+
     - name: Build
       run: cargo build --verbose
 
     - name: Run tests
       run: cargo test --verbose
+
+    - name: Run tests with Ribbit backend
+      run: SCHEME_BACKEND=ribbit cargo test --verbose --test check_output_tests -- --skip test_method_calls

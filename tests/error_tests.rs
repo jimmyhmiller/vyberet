@@ -286,9 +286,13 @@ fn test_error_unicode_in_wrong_place() {
 
 #[test]
 fn test_all_operators_chained() {
-    // Pyret has no precedence, so this should parse left-to-right
+    // Pyret does not allow mixing different operators without parentheses
     let result = parse_expr("1 + 2 - 3 * 4 / 5");
-    assert!(result.is_ok(), "Should parse chained different operators");
+    assert!(result.is_err(), "Should reject mixed operators");
+
+    // But same operators can be chained
+    let result = parse_expr("1 + 2 + 3 + 4 + 5");
+    assert!(result.is_ok(), "Should parse chained same operators");
 }
 
 #[test]

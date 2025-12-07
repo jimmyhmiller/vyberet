@@ -1,164 +1,113 @@
-# Pyret Parser
+# Pyret Compiler
 
-A recursive descent parser for the [Pyret programming language](https://www.pyret.org/), vibe coded with Claude. The parser generates JSON ASTs that match the reference JavaScript implementation byte-for-byte.
+A compiler for [Pyret](https://www.pyret.org/) targeting Scheme, vibe coded with Claude.
 
+## Note
 
-## (HUMAN WRITTEN NOTE)
+This was pretty much entirely vibe coded with Claude. All example files used in the tests came from [pyret-lang](https://github.com/brownplt/pyret-lang/) and are under the Apache License.
 
-This was pretty much entirely vibe coded with claude. If there is some nonsense don't judge me. All example files used in the tests came from [pyret-lang](https://github.com/brownplt/pyret-lang/) and are under the Apache License
+When I handed it to [@tekknolagi](https://github.com/tekknolagi) he immediately found that even an example from the Pyret home page didn't parse. So caveat emptor.
 
-The goal of this project was to see how far I could take a very hands-off vibe coding approach to make a non-trivial piece of software. But what I've found over and over again with vibe coding is it struggles with anything new. Having an oracle is quite effective of a constraint on claude to make it not simply cheat (most of the time). So I vibe coded a pyret ast-to-json file in pyret. This was test over and over again against this. 
+## Usage
 
-Does it all work? It seems to, but I'm sure it is missing a lot trivial things. I have not at all tested its error messages. When I handed it to [@tekknolagi](https://github.com/tekknolagi) he immediately found that even an example of pyret from the home page didn't parse.
-
-There is a last minute, thrown in "compiler" to scheme just to test the ast stuff. Probably could be expanded to something more.
-
-Is this code good? I honestly haven't taken the time to review it yet and see what needs to change. Only human checking I did was looking at the benchmarks. I found that the tokenizer as slow. Used samply to find that it was a silly starts_with method. Asked the ai to rewrite it. But overall, I was surpised how hands off I could be and that it didn't get stuck too much.
-
-
-## Modes
-
-The parser supports four modes for working with Pyret code:
-
-### 1. **Tokenize Mode** - See the token stream
 ```bash
-cargo run -- --mode tokenize examples/factorial.arr
+cargo run --bin compile tests/pyret-files/factorial.arr --run
 ```
 
-Breaks down Pyret source into tokens (keywords, operators, identifiers, etc.). Useful for understanding how the lexer sees your code.
+## Compiled Language Features
 
-### 2. **Parse Mode** - View the AST
-```bash
-cargo run -- --mode parse examples/factorial.arr
-```
-
-Parses Pyret code into a complete Abstract Syntax Tree. Outputs Rust's debug format showing the full structure.
-
-### 3. **JSON Mode** (default) - Pyret-compatible JSON
-```bash
-cargo run -- --mode json examples/factorial.arr
-# or just:
-cargo run -- examples/factorial.arr
-```
-
-Generates JSON output that exactly matches the official Pyret parser. This is the primary output mode and what's validated in our 307 passing tests.
-
-### 4. **Scheme Mode** - Compile to R4RS Scheme
-```bash
-cargo run -- --mode scheme examples/simple.arr
-```
-
-Experimental compiler that translates a small subset of Pyret to R4RS Scheme. This is a proof-of-concept demonstrating that the parser can be used as a compiler frontend.
-
-**What Scheme mode supports:**
-- Numbers and identifiers
-- Binary operators: `+`, `-`, `*`, `/`, `<=`, `>=`, `<`, `>`, `==`
-- Function definitions: `fun factorial(n): n end`
-- Function calls: `factorial(5)`
-- If-else expressions
-
-**Example:**
+### Functions and Lambdas
 ```pyret
 fun factorial(n):
-  if n <= 1:
-    1
-  else:
-    n * factorial(n - 1)
+  if n <= 1: 1
+  else: n * factorial(n - 1)
   end
 end
 
-factorial(5)
+double = lam(x): x * 2 end
 ```
 
-Compiles to:
-```scheme
-(define (factorial n)
-  (if (<= n 1)
-    1
-    (* n (factorial (- n 1)))))
-
-(factorial 5)
-```
-
-## Quick Start
-
-```bash
-# Parse a Pyret file to JSON
-cargo run -- myfile.arr
-
-# Try the scheme compiler
-echo "fun double(x): x + x end" > double.arr
-cargo run -- --mode scheme double.arr
-
-# See tokens
-cargo run -- --mode tokenize myfile.arr --pretty
-
-# Run all tests (307 passing!)
-cargo test
-```
-
-## Project Structure
-
-```
-src/
-├── parser.rs       - Hand-written recursive descent parser
-├── ast.rs          - All AST node types (matching Pyret's reference impl)
-├── tokenizer.rs    - Lexer with whitespace-sensitive tokens
-├── codegen.rs      - Experimental Scheme compiler
-└── main.rs         - CLI with 4 modes
-
-tests/
-├── parser_tests.rs      - 75 unit tests ✅
-└── comparison_tests.rs  - 307 integration tests validating against official Pyret ✅
-```
-
-## Key Features
-
-**Whitespace-sensitive parsing** - `f(x)` is a function call, `f (x)` is two expressions
-
-**No operator precedence** - All binary operators are equal and left-associative:
+### Data Declarations and Pattern Matching
 ```pyret
-2 + 3 * 4  // evaluates as (2 + 3) * 4 = 20, not 14!
+data Shape:
+  | circle(radius)
+  | rectangle(width, height)
+end
+
+fun area(s):
+  cases (Shape) s:
+    | circle(r) => 3 * r * r
+    | rectangle(w, h) => w * h
+  end
+end
 ```
 
-**Arbitrary precision numbers** - Numbers stored as strings to preserve exact values
+### Lists and For Loops
+```pyret
+nums = [list: 1, 2, 3, 4, 5]
 
-**Type-safe operators** - Uses Rust enums instead of strings for operators (refactored today!)
-
-## What's Implemented
-
-Nearly everything in Pyret:
-- All primitive expressions (numbers, strings, booleans, etc.)
-- All binary operators (15 total)
-- Function definitions with generics and type annotations
-- Lambda expressions
-- Data declarations with variants and sharing clauses
-- Pattern matching (cases expressions)
-- Control flow (if, when, for-map/filter/fold/each, blocks)
-- Object expressions with methods
-- Import/export/provide statements
-- Check blocks with refinements
-- Table expressions
-- Spy expressions
-- Template dots (`...`)
-- Underscore partial application (`_ + 2`)
-
-See [CLAUDE.md](CLAUDE.md) for the complete feature list and implementation history.
-
-## Testing
-
-All 307 passing tests verify **byte-for-byte identical JSON** output compared to the official Pyret parser.
-
-```bash
-# Run all tests
-cargo test
-
-# Compare with official parser
-./scripts/compare_parsers.sh "fun f(x): x + 1 end"
+doubled = for map(x from nums): x * 2 end
+evens = for filter(x from nums): num-modulo(x, 2) == 0 end
+total = for fold(acc from 0, x from nums): acc + x end
 ```
 
-## References
+### Method Calls
+```pyret
+nums = [list: 1, 2, 3]
+nums.length()   # 3
+nums.first()    # 1
+nums.rest()     # [list: 2, 3]
+nums.get(0)     # 1
+nums.reverse()  # [list: 3, 2, 1]
 
-- **Pyret Language:** https://www.pyret.org/
-- **Grammar Spec:** Based on pyret-lang/src/js/base/pyret-grammar.bnf
-- **Reference Implementation:** pyret-lang (JavaScript)
+str = "hello world"
+str.length()           # 11
+str.substring(0, 5)    # "hello"
+str.split(" ")         # [list: "hello", "world"]
+```
+
+### Objects
+```pyret
+point = {x: 10, y: 20}
+point.x  # 10
+
+person = {
+  name: "Alice",
+  address: { city: "Boston" }
+}
+person.address.city  # "Boston"
+```
+
+### Check Blocks (Testing)
+```pyret
+check "arithmetic":
+  (2 + 2) is 4
+  (3 * 4) is 12
+end
+
+check "lists":
+  [list: 1, 2].length() is 2
+end
+```
+
+### Other Features
+- Tuples: `{1; "hello"; true}`
+- Mutable variables: `var x = 0` then `x := x + 1`
+- Blocks: `block: ... end`
+- When expressions: `when x > 0: print(x) end`
+- All binary operators: `+`, `-`, `*`, `/`, `<`, `<=`, `>`, `>=`, `==`, `<>`, `and`, `or`
+
+## Scheme Backends
+
+Compiles to R4RS Scheme. Tested with:
+- Chicken Scheme (default)
+- Gambit Scheme: `--interpreter gsi`
+- Chez Scheme: `--interpreter chez`
+- Ribbit Scheme: `--interpreter ribbit`
+
+## Not Yet Implemented
+
+- Object methods with `self`
+- Object extension `obj.{z: 3}`
+- Tables, reactors, refinements
+- Type checking (annotations are parsed but ignored)

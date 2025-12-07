@@ -12,10 +12,18 @@
       "Bash(tokei:*)",
       "WebSearch",
       "WebFetch(domain:iliabylich.github.io)",
-      "WebFetch(domain:oxc.rs)"
+      "WebFetch(domain:oxc.rs)",
+      "WebFetch(domain:en.wikipedia.org)",
+      "WebFetch(domain:people.csail.mit.edu)",
+      "WebFetch(domain:www.cs.nmsu.edu)",
+      "WebFetch(domain:www.cs.brandeis.edu)",
+      "Bash(cat:*)",
+      "Bash(done)",
+      "WebFetch(domain:pyret.org)"
     ],
     "additionalDirectories": [
-      "/Users/jimmyhmiller/Documents/Code/open-source/pyret-lang"
+      "/Users/jimmyhmiller/Documents/Code/open-source/pyret-lang",
+      "/Users/jimmyhmiller/Documents/Code/open-source/ribbit/"
     ]
   }
 }
