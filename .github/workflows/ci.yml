@@ -32,12 +32,20 @@ jobs:
       if: runner.os == 'macOS'
       run: brew install chicken
 
+    - name: Install Gambit (Ubuntu)
+      if: runner.os == 'Linux'
+      run: sudo apt-get install -y gambc
+
+    - name: Install Gambit (macOS)
+      if: runner.os == 'macOS'
+      run: brew install gambit-scheme
+
     - name: Clone and build Ribbit
       run: |
         git clone --depth 1 https://github.com/udem-dlteam/ribbit.git ${{ runner.temp }}/ribbit
         cd ${{ runner.temp }}/ribbit/src
-        # Build rsc.exe from prebuilt C source
-        gcc -O2 -o rsc.exe prebuilt/rsc.c
+        # Build rsc.exe from source using Gambit
+        make rsc.exe
         echo "RIBBIT_DIR=${{ runner.temp }}/ribbit" >> $GITHUB_ENV
 
     - name: Build
