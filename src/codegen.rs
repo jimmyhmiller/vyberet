@@ -8,17 +8,17 @@
 //! Phase 3+: Control flow, data structures, pattern matching, etc.
 
 use crate::ast::{BinOp, CheckOp, Expr, FileRegistry, Import, ImportType, Name, Program, Provide};
+use sha2::{Digest, Sha256};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use sha2::{Sha256, Digest};
 
 /// Scheme backend target
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Backend {
-    Chicken,  // Chicken Scheme (default)
-    Gambit,   // Gambit Scheme
-    Chez,     // Chez Scheme
-    Ribbit,   // Ribbit Scheme (requires custom rational support)
+    Chicken, // Chicken Scheme (default)
+    Gambit,  // Gambit Scheme
+    Chez,    // Chez Scheme
+    Ribbit,  // Ribbit Scheme (requires custom rational support)
 }
 
 impl Default for Backend {
@@ -30,14 +30,14 @@ impl Default for Backend {
 /// Information about a variant's fields
 #[derive(Debug, Clone)]
 struct VariantInfo {
-    fields: Vec<String>,  // Field names in order
+    fields: Vec<String>, // Field names in order
 }
 
 /// Information about a data type's methods
 #[derive(Debug, Clone)]
 struct DataTypeInfo {
-    variants: Vec<String>,  // Names of all variants for this data type
-    methods: HashSet<String>,  // Names of all methods defined on this data type
+    variants: Vec<String>,    // Names of all variants for this data type
+    methods: HashSet<String>, // Names of all methods defined on this data type
 }
 
 /// Module identity - uniquely identifies a module by its URI
@@ -47,12 +47,17 @@ struct ModuleUri(String);
 impl ModuleUri {
     /// Create a module URI from a file path, relative to project root
     fn from_file_path(path: &Path, project_root: &Path) -> Result<Self, String> {
-        let absolute = path.canonicalize()
+        let absolute = path
+            .canonicalize()
             .map_err(|e| format!("Failed to resolve path {:?}: {}", path, e))?;
 
         // Make path relative to project root
-        let relative = absolute.strip_prefix(project_root)
-            .map_err(|_| format!("Path {:?} is not within project root {:?}", absolute, project_root))?;
+        let relative = absolute.strip_prefix(project_root).map_err(|_| {
+            format!(
+                "Path {:?} is not within project root {:?}",
+                absolute, project_root
+            )
+        })?;
 
         // Convert to forward slashes for consistency
         let relative_str = relative.to_string_lossy().replace('\\', "/");
@@ -199,10 +204,13 @@ impl SchemeCompiler {
         self.current_module_path = Some(filepath.to_path_buf());
 
         // Register this module
-        self.modules.insert(uri.clone(), ModuleInfo {
-            uri,
-            provides: HashSet::new(),
-        });
+        self.modules.insert(
+            uri.clone(),
+            ModuleInfo {
+                uri,
+                provides: HashSet::new(),
+            },
+        );
 
         Ok(())
     }
@@ -212,10 +220,13 @@ impl SchemeCompiler {
         let uri = ModuleUri::builtin(name);
         self.current_module_uri = Some(uri.clone());
 
-        self.modules.insert(uri.clone(), ModuleInfo {
-            uri,
-            provides: HashSet::new(),
-        });
+        self.modules.insert(
+            uri.clone(),
+            ModuleInfo {
+                uri,
+                provides: HashSet::new(),
+            },
+        );
     }
 
     /// Legacy method for compatibility
@@ -278,10 +289,12 @@ impl SchemeCompiler {
                 // For file modules, use 8-character hash prefix
                 uri.hash_prefix(8)
             };
-            format!("{}_{}__{}",
+            format!(
+                "{}_{}__{}",
                 self.mangle_name(&basename),
                 hash,
-                self.mangle_name(name))
+                self.mangle_name(name)
+            )
         } else {
             // Fallback if no module URI set (shouldn't happen in normal use)
             self.mangle_name(name)
@@ -321,10 +334,13 @@ impl SchemeCompiler {
 
                     // Register the module if not already present
                     if !self.modules.contains_key(&uri) {
-                        self.modules.insert(uri.clone(), ModuleInfo {
-                            uri,
-                            provides: HashSet::new(),
-                        });
+                        self.modules.insert(
+                            uri.clone(),
+                            ModuleInfo {
+                                uri,
+                                provides: HashSet::new(),
+                            },
+                        );
                     }
                 }
                 Import::SInclude { import, .. } => {
@@ -531,15 +547,15 @@ impl SchemeCompiler {
                 // For other backends, use native Scheme operators
                 let op_str = if self.backend == Backend::Ribbit {
                     match op {
-                        BinOp::Plus => "pyret:+",  // Use polymorphic + for strings and rationals
+                        BinOp::Plus => "pyret:+", // Use polymorphic + for strings and rationals
                         BinOp::Minus => "rat-",
                         BinOp::Times => "rat*",
-                        BinOp::Divide => "rat/",  // Use rat/ for division (handles both integers and rationals)
+                        BinOp::Divide => "rat/", // Use rat/ for division (handles both integers and rationals)
                         BinOp::Leq => "rat<=",
                         BinOp::Geq => "rat>=",
                         BinOp::Lt => "rat<",
                         BinOp::Gt => "rat>",
-                        BinOp::Equal => "pyret:equal?",  // Use polymorphic equality
+                        BinOp::Equal => "pyret:equal?", // Use polymorphic equality
                         BinOp::Neq => "pyret:not-equal?",
                         BinOp::And => "and",
                         BinOp::Or => "or",
@@ -549,7 +565,7 @@ impl SchemeCompiler {
                     }
                 } else {
                     match op {
-                        BinOp::Plus => "pyret:+",  // Use runtime polymorphic + for strings and numbers
+                        BinOp::Plus => "pyret:+", // Use runtime polymorphic + for strings and numbers
                         BinOp::Minus => "-",
                         BinOp::Times => "*",
                         BinOp::Divide => "/",
@@ -557,7 +573,7 @@ impl SchemeCompiler {
                         BinOp::Geq => ">=",
                         BinOp::Lt => "<",
                         BinOp::Gt => ">",
-                        BinOp::Equal => "pyret:equal?",  // Use polymorphic equality for all types
+                        BinOp::Equal => "pyret:equal?", // Use polymorphic equality for all types
                         BinOp::Neq => "pyret:not-equal?",
                         BinOp::And => "and",
                         BinOp::Or => "or",
@@ -586,7 +602,8 @@ impl SchemeCompiler {
                     let mut dispatch_fn_name = None;
                     for (data_name, info) in &self.data_types {
                         if info.methods.contains(field) {
-                            dispatch_fn_name = Some(format!("{}${}",
+                            dispatch_fn_name = Some(format!(
+                                "{}${}",
                                 self.mangle_name(data_name),
                                 self.mangle_name(field)
                             ));
@@ -618,15 +635,25 @@ impl SchemeCompiler {
 
                         let method_name = field;
                         if args.is_empty() {
-                            return Ok(format!("(pyret:method-call {} \"{}\")", obj_code, method_name));
+                            return Ok(format!(
+                                "(pyret:method-call {} \"{}\")",
+                                obj_code, method_name
+                            ));
                         } else {
-                            return Ok(format!("(pyret:method-call {} \"{}\" {})", obj_code, method_name, args_str));
+                            return Ok(format!(
+                                "(pyret:method-call {} \"{}\" {})",
+                                obj_code, method_name, args_str
+                            ));
                         }
                     }
                 }
 
                 // Check if this is a call to a Pyret builtin function or module-scoped function
-                if let Expr::SId { id: Name::SName { s, .. }, .. } = &**_fun {
+                if let Expr::SId {
+                    id: Name::SName { s, .. },
+                    ..
+                } = &**_fun
+                {
                     // Map Pyret builtin names to runtime function names
                     let runtime_name = match s.as_str() {
                         "print" => Some("pyret:print"),
@@ -692,7 +719,12 @@ impl SchemeCompiler {
                 }
 
                 // Build nested if-else chain from branches
-                fn build_if_chain(compiler: &mut SchemeCompiler, branches: &[crate::ast::IfBranch], else_expr: &Box<Expr>, index: usize) -> Result<String, String> {
+                fn build_if_chain(
+                    compiler: &mut SchemeCompiler,
+                    branches: &[crate::ast::IfBranch],
+                    else_expr: &Box<Expr>,
+                    index: usize,
+                ) -> Result<String, String> {
                     if index >= branches.len() {
                         // No more branches, compile the else
                         return compiler.compile_expr(else_expr);
@@ -716,7 +748,11 @@ impl SchemeCompiler {
                 }
 
                 // Build nested if-else chain from branches, with #f as the final else
-                fn build_if_chain_no_else(compiler: &mut SchemeCompiler, branches: &[crate::ast::IfBranch], index: usize) -> Result<String, String> {
+                fn build_if_chain_no_else(
+                    compiler: &mut SchemeCompiler,
+                    branches: &[crate::ast::IfBranch],
+                    index: usize,
+                ) -> Result<String, String> {
                     if index >= branches.len() {
                         // No more branches, use #f as default else
                         return Ok("#f".to_string());
@@ -748,7 +784,11 @@ impl SchemeCompiler {
                     return Err("If-pipe expression has no branches".to_string());
                 }
 
-                fn build_pipe_chain(compiler: &mut SchemeCompiler, branches: &[crate::ast::IfPipeBranch], index: usize) -> Result<String, String> {
+                fn build_pipe_chain(
+                    compiler: &mut SchemeCompiler,
+                    branches: &[crate::ast::IfPipeBranch],
+                    index: usize,
+                ) -> Result<String, String> {
                     if index >= branches.len() {
                         return Ok("#f".to_string());
                     }
@@ -764,14 +804,21 @@ impl SchemeCompiler {
                 build_pipe_chain(self, branches, 0)
             }
 
-            Expr::SIfPipeElse { branches, _else, .. } => {
+            Expr::SIfPipeElse {
+                branches, _else, ..
+            } => {
                 // If-pipe with else: ask | test: body | test2: body2 | otherwise: else_body end
                 // Compiles to nested if-else chain
                 if branches.is_empty() {
                     return Err("If-pipe-else expression has no branches".to_string());
                 }
 
-                fn build_pipe_chain_else(compiler: &mut SchemeCompiler, branches: &[crate::ast::IfPipeBranch], else_expr: &Box<Expr>, index: usize) -> Result<String, String> {
+                fn build_pipe_chain_else(
+                    compiler: &mut SchemeCompiler,
+                    branches: &[crate::ast::IfPipeBranch],
+                    else_expr: &Box<Expr>,
+                    index: usize,
+                ) -> Result<String, String> {
                     if index >= branches.len() {
                         return compiler.compile_expr(else_expr);
                     }
@@ -867,36 +914,48 @@ impl SchemeCompiler {
                 }
 
                 // Check if we have any SLet statements - if so, use let* for proper scoping
-                let has_let = stmts.iter().any(|stmt| matches!(&**stmt, Expr::SLet { .. }));
+                let has_let = stmts
+                    .iter()
+                    .any(|stmt| matches!(&**stmt, Expr::SLet { .. }));
 
                 if has_let {
                     // Build nested let* expressions to properly handle interleaved bindings and statements
                     // Each SLet creates a new scope, and following statements execute in that scope
-                    fn build_nested_lets(stmts: &[Box<Expr>], compiler: &mut SchemeCompiler) -> Result<String, String> {
+                    fn build_nested_lets(
+                        stmts: &[Box<Expr>],
+                        compiler: &mut SchemeCompiler,
+                    ) -> Result<String, String> {
                         if stmts.is_empty() {
                             return Ok("#<void>".to_string());
                         }
 
                         // Find the first SLet
-                        if let Some((idx, _)) = stmts.iter().enumerate().find(|(_, s)| matches!(&***s, Expr::SLet { .. })) {
+                        if let Some((idx, _)) = stmts
+                            .iter()
+                            .enumerate()
+                            .find(|(_, s)| matches!(&***s, Expr::SLet { .. }))
+                        {
                             // Compile any statements before this let
-                            let before: Result<Vec<_>, _> = stmts[..idx].iter()
+                            let before: Result<Vec<_>, _> = stmts[..idx]
+                                .iter()
                                 .map(|s| compiler.compile_expr(s))
                                 .collect();
                             let before = before?;
 
-                            let (var_name, value_str) = if let Expr::SLet { name, value, .. } = &*stmts[idx] {
-                                let vn = compiler.compile_bind_name(name);
-                                let vs = compiler.compile_expr(value)?;
-                                (vn, vs)
-                            } else {
-                                unreachable!()
-                            };
+                            let (var_name, value_str) =
+                                if let Expr::SLet { name, value, .. } = &*stmts[idx] {
+                                    let vn = compiler.compile_bind_name(name);
+                                    let vs = compiler.compile_expr(value)?;
+                                    (vn, vs)
+                                } else {
+                                    unreachable!()
+                                };
 
                             // Recursively build the rest
                             let rest = build_nested_lets(&stmts[idx + 1..], compiler)?;
 
-                            let binding_part = format!("(let* (({}  {})) {})", var_name, value_str, rest);
+                            let binding_part =
+                                format!("(let* (({}  {})) {})", var_name, value_str, rest);
 
                             // Wrap with begin if there are statements before
                             if before.is_empty() {
@@ -909,9 +968,8 @@ impl SchemeCompiler {
                             if stmts.len() == 1 {
                                 compiler.compile_expr(&stmts[0])
                             } else {
-                                let exprs: Result<Vec<_>, _> = stmts.iter()
-                                    .map(|s| compiler.compile_expr(s))
-                                    .collect();
+                                let exprs: Result<Vec<_>, _> =
+                                    stmts.iter().map(|s| compiler.compile_expr(s)).collect();
                                 Ok(format!("(begin {})", exprs?.join(" ")))
                             }
                         }
@@ -1013,24 +1071,37 @@ impl SchemeCompiler {
                 if field_value_pairs.is_empty() {
                     Ok("(pyret:make-object-literal)".to_string())
                 } else {
-                    Ok(format!("(pyret:make-object-literal {})", field_value_pairs.join(" ")))
+                    Ok(format!(
+                        "(pyret:make-object-literal {})",
+                        field_value_pairs.join(" ")
+                    ))
                 }
             }
 
-            Expr::SConstruct { constructor, values, .. } => {
+            Expr::SConstruct {
+                constructor,
+                values,
+                ..
+            } => {
                 // Construct expression: [list: 1, 2, 3] or [list-set: a, b]
                 // Get the original constructor name (before mangling)
-                let constructor_name = if let Expr::SId { id: Name::SName { s, .. }, .. } = &**constructor {
+                let constructor_name = if let Expr::SId {
+                    id: Name::SName { s, .. },
+                    ..
+                } = &**constructor
+                {
                     s.clone()
                 } else {
-                    return Err("Construct expression requires simple identifier constructor".to_string());
+                    return Err(
+                        "Construct expression requires simple identifier constructor".to_string(),
+                    );
                 };
 
                 // Map common constructors to runtime functions
                 let runtime_fn = match constructor_name.as_str() {
                     "list" => "pyret:construct-list",
                     "list-set" => "pyret:construct-list-set",
-                    "tree-set" => "pyret:construct-tree-set",  // TODO: implement
+                    "tree-set" => "pyret:construct-tree-set", // TODO: implement
                     // Could add more: array, etc.
                     _ => return Err(format!("Unknown constructor: {}", constructor_name)),
                 };
@@ -1058,7 +1129,8 @@ impl SchemeCompiler {
 
                 // Extract location information
                 let file = if let Some(ref registry) = self.file_registry {
-                    registry.get_filename(l.file_id)
+                    registry
+                        .get_filename(l.file_id)
                         .map(|s| s.as_str())
                         .unwrap_or("unknown")
                 } else {
@@ -1088,7 +1160,14 @@ impl SchemeCompiler {
                 Ok(result)
             }
 
-            Expr::SCheckTest { l, op, refinement, left, right, .. } => {
+            Expr::SCheckTest {
+                l,
+                op,
+                refinement,
+                left,
+                right,
+                ..
+            } => {
                 if !self.enable_checks {
                     // When checks are disabled, return nothing/void
                     return Ok("(begin)".to_string());
@@ -1101,7 +1180,7 @@ impl SchemeCompiler {
                 // Compile left expression
                 let left_code = self.compile_expr(left)?;
 
-// Different check operators have different behavior
+                // Different check operators have different behavior
                 match op {
                     CheckOp::SOpIs { .. } => {
                         // is operator - check equality
@@ -1339,16 +1418,17 @@ impl SchemeCompiler {
                 // FIRST PASS: Collect all variant names and method names
                 for variant in variants {
                     let (variant_name, with_members) = match variant {
-                        crate::ast::Variant::SSingletonVariant { name, with_members, .. } => {
-                            (name, with_members)
-                        }
-                        crate::ast::Variant::SVariant { name, with_members, .. } => {
-                            (name, with_members)
-                        }
+                        crate::ast::Variant::SSingletonVariant {
+                            name, with_members, ..
+                        } => (name, with_members),
+                        crate::ast::Variant::SVariant {
+                            name, with_members, ..
+                        } => (name, with_members),
                     };
 
                     variant_names.push(variant_name.clone());
-                    self.variant_to_datatype.insert(variant_name.clone(), data_name.clone());
+                    self.variant_to_datatype
+                        .insert(variant_name.clone(), data_name.clone());
 
                     // Collect method names
                     for member in with_members {
@@ -1365,13 +1445,17 @@ impl SchemeCompiler {
                     DataTypeInfo {
                         variants: variant_names.clone(),
                         methods: method_names.clone(),
-                    }
+                    },
                 );
 
                 // SECOND PASS: Generate constructor functions and methods for each variant
                 for variant in variants {
                     match variant {
-                        crate::ast::Variant::SSingletonVariant { name: variant_name, with_members, .. } => {
+                        crate::ast::Variant::SSingletonVariant {
+                            name: variant_name,
+                            with_members,
+                            ..
+                        } => {
                             // Singleton variant: Generate both a value and a function
                             // Value: (define empty-value '(empty))
                             // Function: (define (empty) empty-value)
@@ -1398,25 +1482,30 @@ impl SchemeCompiler {
 
                             // Generate predicate: (define (is-red? x) (and (pair? x) (eq? (car x) 'red)))
                             // Use full mangling and namespacing for the predicate name to match how it's called
-                            let predicate_name = self.namespace_function_name(&format!("is-{}", variant_name));
+                            let predicate_name =
+                                self.namespace_function_name(&format!("is-{}", variant_name));
                             result.push_str(&format!(
                                 "(define ({} x) (and (pair? x) (eq? (car x) '{})))\n",
                                 predicate_name, variant_name
                             ));
 
                             // Track the predicate as a toplevel function
-                            self.toplevel_functions.insert(format!("is-{}", variant_name));
+                            self.toplevel_functions
+                                .insert(format!("is-{}", variant_name));
 
                             // Track that this variant has no fields
-                            self.variant_fields.insert(
-                                variant_name.clone(),
-                                VariantInfo { fields: vec![] }
-                            );
+                            self.variant_fields
+                                .insert(variant_name.clone(), VariantInfo { fields: vec![] });
 
                             // Generate methods for this variant
                             self.compile_variant_methods(&mut result, variant_name, with_members)?;
                         }
-                        crate::ast::Variant::SVariant { name: variant_name, members, with_members, .. } => {
+                        crate::ast::Variant::SVariant {
+                            name: variant_name,
+                            members,
+                            with_members,
+                            ..
+                        } => {
                             // Variant with fields: (define (point x y) (list 'point x y))
                             let constructor_name = self.namespace_function_name(variant_name);
 
@@ -1426,13 +1515,11 @@ impl SchemeCompiler {
                                 .map(|member| {
                                     // Get the original field name (before mangling) from the bind
                                     match &member.bind {
-                                        crate::ast::Bind::SBind { id, .. } => {
-                                            match id {
-                                                Name::SName { s, .. } => s.clone(),
-                                                _ => self.compile_name(id)
-                                            }
-                                        }
-                                        _ => self.compile_bind_name(&member.bind)
+                                        crate::ast::Bind::SBind { id, .. } => match id {
+                                            Name::SName { s, .. } => s.clone(),
+                                            _ => self.compile_name(id),
+                                        },
+                                        _ => self.compile_bind_name(&member.bind),
                                     }
                                 })
                                 .collect();
@@ -1440,7 +1527,9 @@ impl SchemeCompiler {
                             // Track field information for this variant
                             self.variant_fields.insert(
                                 variant_name.clone(),
-                                VariantInfo { fields: field_names.clone() }
+                                VariantInfo {
+                                    fields: field_names.clone(),
+                                },
                             );
 
                             // Track this constructor as a toplevel function
@@ -1462,14 +1551,16 @@ impl SchemeCompiler {
 
                             // Generate predicate: (define (is-link? x) (and (pair? x) (eq? (car x) 'link)))
                             // Use full mangling and namespacing for the predicate name to match how it's called
-                            let predicate_name = self.namespace_function_name(&format!("is-{}", variant_name));
+                            let predicate_name =
+                                self.namespace_function_name(&format!("is-{}", variant_name));
                             result.push_str(&format!(
                                 "(define ({} x) (and (pair? x) (eq? (car x) '{})))\n",
                                 predicate_name, variant_name
                             ));
 
                             // Track the predicate as a toplevel function
-                            self.toplevel_functions.insert(format!("is-{}", variant_name));
+                            self.toplevel_functions
+                                .insert(format!("is-{}", variant_name));
 
                             // Generate methods for this variant
                             self.compile_variant_methods(&mut result, variant_name, with_members)?;
@@ -1480,21 +1571,20 @@ impl SchemeCompiler {
                 // Generate dispatch functions for each method
                 // For each method, create a function that dispatches based on the variant tag
                 for method_name in &method_names {
-                    let dispatch_fn_name = format!("{}${}",
+                    let dispatch_fn_name = format!(
+                        "{}${}",
                         self.mangle_name(data_name),
                         self.mangle_name(method_name)
                     );
 
-                    result.push_str(&format!(
-                        "(define ({} obj . args)\n",
-                        dispatch_fn_name
-                    ));
+                    result.push_str(&format!("(define ({} obj . args)\n", dispatch_fn_name));
                     result.push_str("  (let ((tag (car obj)))\n");
                     result.push_str("    (cond\n");
 
                     // Generate case for each variant
                     for variant_name in &variant_names {
-                        let variant_method_fn = format!("{}${}",
+                        let variant_method_fn = format!(
+                            "{}${}",
                             self.mangle_name(variant_name),
                             self.mangle_name(method_name)
                         );
@@ -1538,14 +1628,16 @@ impl SchemeCompiler {
                 // 3. Object field access (using field name)
 
                 // Check if obj is a simple identifier that matches an import alias
-                if let Expr::SId { id: Name::SName { s, .. }, .. } = &**obj {
+                if let Expr::SId {
+                    id: Name::SName { s, .. },
+                    ..
+                } = &**obj
+                {
                     if let Some(module_uri) = self.imports.get(s) {
                         // This is a qualified name: M.foo
                         // Generate the fully-qualified function name
                         let prefix = self.get_module_prefix(module_uri);
-                        return Ok(format!("{}__{}",
-                            prefix,
-                            self.mangle_name(field)));
+                        return Ok(format!("{}__{}", prefix, self.mangle_name(field)));
                     }
                 }
 
@@ -1577,15 +1669,23 @@ impl SchemeCompiler {
                 self.compile_cases(val, branches, None)
             }
 
-            Expr::SCasesElse { val, branches, _else, .. } => {
+            Expr::SCasesElse {
+                val,
+                branches,
+                _else,
+                ..
+            } => {
                 // Cases expression with else clause
                 self.compile_cases(val, branches, Some(_else))
             }
 
             // ===== For Loops =====
-            Expr::SFor { iterator, bindings, body, .. } => {
-                self.compile_for(iterator, bindings, body)
-            }
+            Expr::SFor {
+                iterator,
+                bindings,
+                body,
+                ..
+            } => self.compile_for(iterator, bindings, body),
 
             _ => Err(format!("Unsupported expression type: {:?}", expr)),
         }
@@ -1603,17 +1703,23 @@ impl SchemeCompiler {
 
         for member in with_members {
             match member {
-                Member::SMethodField { name, params: _, args, body, .. } => {
+                Member::SMethodField {
+                    name,
+                    params: _,
+                    args,
+                    body,
+                    ..
+                } => {
                     // Generate method function name: variant-name$method-name
-                    let method_fn_name = format!("{}${}",
+                    let method_fn_name = format!(
+                        "{}${}",
                         self.mangle_name(variant_name),
                         self.mangle_name(name)
                     );
 
                     // Compile parameters - first param is 'self'
-                    let param_names: Vec<String> = args.iter().map(|arg| {
-                        self.compile_bind_name(arg)
-                    }).collect();
+                    let param_names: Vec<String> =
+                        args.iter().map(|arg| self.compile_bind_name(arg)).collect();
 
                     // Compile method body
                     self.indent_level += 1;
@@ -1689,7 +1795,9 @@ impl SchemeCompiler {
         use crate::ast::CasesBranch;
 
         match branch {
-            CasesBranch::SCasesBranch { name, args, body, .. } => {
+            CasesBranch::SCasesBranch {
+                name, args, body, ..
+            } => {
                 // Branch with field bindings
                 // Generate the tag check: (eq? (car val) 'variant-name)
                 let mut result = format!("    ((eq? (car {}) '{}) ", val_var, name);

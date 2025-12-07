@@ -69,12 +69,7 @@ impl ParseError {
         }
     }
 
-    pub fn mixed_binops(
-        op_a: &str,
-        loc_a: &Token,
-        op_b: &str,
-        loc_b: &Token,
-    ) -> Self {
+    pub fn mixed_binops(op_a: &str, loc_a: &Token, op_b: &str, loc_b: &Token) -> Self {
         ParseError::MixedBinops {
             op_a: op_a.to_string(),
             loc_a: format_location(loc_a),

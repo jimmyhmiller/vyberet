@@ -45,17 +45,17 @@
 
 ;; Rational number predicate
 ;; For Chicken/Gambit/Chez: checks native rationals
-;; For Ribbit: will be overridden in rationals.scm to check tagged pairs
+;; For Ribbit: will be overridden in ribbit-additions.scm to check tagged pairs
 (define (pyret:rat? x)
   (and (rational? x) (not (integer? x))))
 
 ;; Rational equality (for native rationals)
-;; For Ribbit: will be overridden in rationals.scm
+;; For Ribbit: will be overridden in ribbit-additions.scm
 (define (rat= x y)
   (equal? x y))
 
 ;; Constructor stub for native rationals
-;; For Ribbit: will be overridden in rationals.scm
+;; For Ribbit: will be overridden in ribbit-additions.scm
 (define (make-rat n d)
   (/ n d))
 
@@ -395,7 +395,7 @@
           (loop (cdr items) #f)))))
 
 ;; Display a rational number (stub for native rationals)
-;; For Ribbit: will be overridden in rationals.scm
+;; For Ribbit: will be overridden in ribbit-additions.scm
 (define (display-rat x)
   (display x))  ; Native rationals display themselves correctly
 

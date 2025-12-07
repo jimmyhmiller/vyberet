@@ -128,7 +128,12 @@ impl ModuleCompiler {
         // Generate project-relative URI
         let relative_path = absolute_path
             .strip_prefix(&self.project_root)
-            .map_err(|_| format!("Path {:?} is not within project root {:?}", absolute_path, self.project_root))?;
+            .map_err(|_| {
+                format!(
+                    "Path {:?} is not within project root {:?}",
+                    absolute_path, self.project_root
+                )
+            })?;
 
         let relative_str = relative_path.to_string_lossy().replace('\\', "/");
         let uri = format!("file://{}", relative_str);
@@ -148,7 +153,9 @@ impl ModuleCompiler {
             .map_err(|e| format!("Failed to get mtime for {:?}: {}", absolute_path, e))?;
 
         // Parse
-        let file_id = self.file_registry.register(absolute_path.to_string_lossy().to_string());
+        let file_id = self
+            .file_registry
+            .register(absolute_path.to_string_lossy().to_string());
         let mut tokenizer = Tokenizer::new(&source, file_id);
         let tokens = tokenizer.tokenize();
         let mut parser = Parser::new(tokens, file_id);
@@ -190,7 +197,11 @@ impl ModuleCompiler {
     }
 
     /// Extract dependencies from a program's imports
-    fn extract_dependencies(&self, program: &Program, current_file: &Path) -> Result<Vec<Dependency>, String> {
+    fn extract_dependencies(
+        &self,
+        program: &Program,
+        current_file: &Path,
+    ) -> Result<Vec<Dependency>, String> {
         let mut dependencies = Vec::new();
 
         for import in &program.imports {
@@ -213,7 +224,11 @@ impl ModuleCompiler {
     }
 
     /// Resolve an import to a URI
-    fn resolve_import_to_uri(&self, import: &ImportType, current_file: &Path) -> Result<String, String> {
+    fn resolve_import_to_uri(
+        &self,
+        import: &ImportType,
+        current_file: &Path,
+    ) -> Result<String, String> {
         match import {
             ImportType::SConstImport { module, .. } => {
                 // Builtin module
@@ -234,13 +249,16 @@ impl ModuleCompiler {
                             }
                         };
 
-                        let absolute = resolved_path
-                            .canonicalize()
-                            .map_err(|e| format!("Failed to resolve import {:?}: {}", resolved_path, e))?;
+                        let absolute = resolved_path.canonicalize().map_err(|e| {
+                            format!("Failed to resolve import {:?}: {}", resolved_path, e)
+                        })?;
 
-                        let relative = absolute
-                            .strip_prefix(&self.project_root)
-                            .map_err(|_| format!("Import path {:?} is not within project root {:?}", absolute, self.project_root))?;
+                        let relative = absolute.strip_prefix(&self.project_root).map_err(|_| {
+                            format!(
+                                "Import path {:?} is not within project root {:?}",
+                                absolute, self.project_root
+                            )
+                        })?;
 
                         let relative_str = relative.to_string_lossy().replace('\\', "/");
                         Ok(format!("file://{}", relative_str))

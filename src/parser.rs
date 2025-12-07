@@ -5000,19 +5000,30 @@ impl Parser {
     /// at the same level without parentheses.
     ///
     /// Returns the first operator found and its location token for error reporting.
-    fn check_mixed_operators(&self, expr: &Expr, expected_op: Option<(BinOp, Loc)>) -> ParseResult<()> {
+    fn check_mixed_operators(
+        &self,
+        expr: &Expr,
+        expected_op: Option<(BinOp, Loc)>,
+    ) -> ParseResult<()> {
         match expr {
-            Expr::SOp { op, op_l, left, right, .. } => {
+            Expr::SOp {
+                op,
+                op_l,
+                left,
+                right,
+                ..
+            } => {
                 // Check if this operator matches the expected operator
                 if let Some((expected, expected_loc)) = expected_op {
                     if *op != expected {
                         // Different operators found - create error with proper formatting
                         // Report operators in source order (whichever appears first)
-                        let (op_a, loc_a, op_b, loc_b) = if expected_loc.start_char < op_l.start_char {
-                            (expected, expected_loc, *op, *op_l)
-                        } else {
-                            (*op, *op_l, expected, expected_loc)
-                        };
+                        let (op_a, loc_a, op_b, loc_b) =
+                            if expected_loc.start_char < op_l.start_char {
+                                (expected, expected_loc, *op, *op_l)
+                            } else {
+                                (*op, *op_l, expected, expected_loc)
+                            };
 
                         let op_a_name = op_a.as_str().strip_prefix("op").unwrap_or(op_a.as_str());
                         let op_b_name = op_b.as_str().strip_prefix("op").unwrap_or(op_b.as_str());
@@ -5030,10 +5041,7 @@ impl Parser {
                         };
 
                         return Err(ParseError::mixed_binops(
-                            op_a_name,
-                            &tok_a,
-                            op_b_name,
-                            &tok_b,
+                            op_a_name, &tok_a, op_b_name, &tok_b,
                         ));
                     }
                 }
@@ -5046,7 +5054,7 @@ impl Parser {
                 Ok(())
             }
             // For non-operator expressions, we don't need to check
-            _ => Ok(())
+            _ => Ok(()),
         }
     }
 }

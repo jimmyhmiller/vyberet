@@ -1,6 +1,29 @@
-;;; Rational Number Support for Ribbit Scheme
+;;; Ribbit-specific Additions
 ;;; This file is only loaded when compiling to Ribbit backend
-;;; Ribbit only supports integer arithmetic, so we implement rationals as tagged pairs
+;;; Contains: rational number support (Ribbit only supports integers),
+;;; and fixes for built-in functions that need self-contained implementations
+
+;; ============================================================================
+;; Ribbit Built-in Overrides
+;; ============================================================================
+
+;; In Ribbit, built-in functions like `map` are implemented in Scheme and
+;; recursively call themselves by name. When we later redefine `map` for Pyret
+;; tagged lists, those internal recursive calls go to the new definition,
+;; breaking string operations like string-to-upper that use scheme:map.
+;; We fix this by providing self-contained implementations that use named let.
+
+(define (scheme:length lst)
+  (let loop ((lst lst) (n 0))
+    (if (pair? lst)
+        (loop (cdr lst) (+ n 1))
+        n)))
+
+(define (scheme:map f lst)
+  (let loop ((lst lst))
+    (if (pair? lst)
+        (cons (f (car lst)) (loop (cdr lst)))
+        '())))
 
 ;; ============================================================================
 ;; Rational Data Structure
@@ -153,6 +176,11 @@
     ((and (string? a) (string? b)) (string-append a b))
     ((or (string? a) (string? b))
      (error "Cannot add string and number"))
+    ;; If both are plain integers, use integer addition
+    ((and (number? a) (not (pyret:rat? a))
+          (number? b) (not (pyret:rat? b)))
+     (+ a b))
+    ;; Otherwise use rational arithmetic
     (else (rat+ a b))))
 
 ;; Polymorphic equality: handles rationals, integers, strings, booleans, lists, etc.

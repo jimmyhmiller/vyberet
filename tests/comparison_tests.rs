@@ -494,7 +494,7 @@ fn test_pyret_match_ultra_complex_expression() {
     // 3. Multiple operator types (same operators only - Pyret rejects mixing)
     // Note: Changed to use only compatible operators (can't mix +, *, and, or, <, etc.)
     assert_matches_pyret(
-        "foo(x + y + z, bar.baz(a, b)).qux(w * z * v).result((true and false) and (p < q))"
+        "foo(x + y + z, bar.baz(a, b)).qux(w * z * v).result((true and false) and (p < q))",
     );
 }
 

@@ -65,12 +65,12 @@ fn compile_and_run_with_checks(file_path: &str) -> String {
     ));
 
     // Read runtime
-    let runtime_code = fs::read_to_string("runtime/runtime.scm")
-        .expect("Failed to read runtime library");
+    let runtime_code =
+        fs::read_to_string("runtime/runtime.scm").expect("Failed to read runtime library");
 
     // For Ribbit, also load rationals library
     let runtime_with_rationals = if backend_str == "ribbit" {
-        let rationals_code = fs::read_to_string("runtime/rationals.scm")
+        let rationals_code = fs::read_to_string("runtime/ribbit-additions.scm")
             .expect("Failed to read rationals library");
         format!("{}\n\n{}", runtime_code, rationals_code)
     } else {
@@ -111,7 +111,9 @@ fn compile_and_run_with_checks(file_path: &str) -> String {
             // Compile with Ribbit to C, then run
             let ribbit_dir = std::env::var("RIBBIT_DIR")
                 .map(|d| format!("{}/src", d))
-                .unwrap_or_else(|_| "/Users/jimmyhmiller/Documents/Code/open-source/ribbit/src".to_string());
+                .unwrap_or_else(|_| {
+                    "/Users/jimmyhmiller/Documents/Code/open-source/ribbit/src".to_string()
+                });
 
             // Use a single timestamp for both filenames to avoid race conditions
             let timestamp = std::time::SystemTime::now()
@@ -119,16 +121,10 @@ fn compile_and_run_with_checks(file_path: &str) -> String {
                 .unwrap()
                 .as_nanos();
 
-            let c_file = temp_dir.join(format!(
-                "test_pyret_{}_{}.c",
-                std::process::id(),
-                timestamp
-            ));
-            let exe_file = temp_dir.join(format!(
-                "test_pyret_{}_{}",
-                std::process::id(),
-                timestamp
-            ));
+            let c_file =
+                temp_dir.join(format!("test_pyret_{}_{}.c", std::process::id(), timestamp));
+            let exe_file =
+                temp_dir.join(format!("test_pyret_{}_{}", std::process::id(), timestamp));
 
             // Compile Scheme to C with Ribbit
             let rsc_output = Command::new(format!("{}/rsc.exe", ribbit_dir))
@@ -175,7 +171,10 @@ fn compile_and_run_with_checks(file_path: &str) -> String {
 
             exe_output
         }
-        _ => panic!("Unknown SCHEME_BACKEND: {}. Use 'chicken', 'gambit', 'chez', or 'ribbit'", backend),
+        _ => panic!(
+            "Unknown SCHEME_BACKEND: {}. Use 'chicken', 'gambit', 'chez', or 'ribbit'",
+            backend
+        ),
     };
 
     // Clean up
@@ -444,7 +443,10 @@ fn test_for_loops() {
     );
 
     // Verify output includes expected results
-    assert!(output.contains("[list: 2, 4, 6, 8, 10]"), "Expected doubled list");
+    assert!(
+        output.contains("[list: 2, 4, 6, 8, 10]"),
+        "Expected doubled list"
+    );
     assert!(output.contains("[list: 2, 4]"), "Expected filtered evens");
     assert!(output.contains("15"), "Expected sum of 15");
 }

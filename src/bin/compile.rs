@@ -171,43 +171,48 @@ fn run_scheme(scheme_code: &str, interpreter: &str) -> Result<(), String> {
         let runtime_code = fs::read_to_string(runtime_path)
             .map_err(|e| format!("Failed to read runtime library at {}: {}", runtime_path, e))?;
 
-        // For Ribbit, also load the rationals library
+        // For Ribbit, also load the ribbit-additions library
         let runtime_with_rationals = if interpreter == "ribbit" {
-            let rationals_path = "runtime/rationals.scm";
-            let rationals_code = fs::read_to_string(rationals_path)
-                .map_err(|e| format!("Failed to read rationals library at {}: {}", rationals_path, e))?;
-            format!("{}\n\n; ==== Rational Number Support (Ribbit) ====\n{}", runtime_code, rationals_code)
+            let ribbit_additions_path = "runtime/ribbit-additions.scm";
+            let ribbit_additions_code = fs::read_to_string(ribbit_additions_path).map_err(|e| {
+                format!(
+                    "Failed to read ribbit-additions library at {}: {}",
+                    ribbit_additions_path, e
+                )
+            })?;
+            format!(
+                "{}\n\n; ==== Ribbit Additions ====\n{}",
+                runtime_code, ribbit_additions_code
+            )
         } else {
             runtime_code
         };
 
         // Combine runtime and code
-        format!("{}\n\n; ==== Compiled Pyret Code ====\n{}", runtime_with_rationals, scheme_code)
+        format!(
+            "{}\n\n; ==== Compiled Pyret Code ====\n{}",
+            runtime_with_rationals, scheme_code
+        )
     };
 
     // Write to temp file
-    fs::write(&temp_file, full_code)
-        .map_err(|e| format!("Failed to write temp file: {}", e))?;
+    fs::write(&temp_file, full_code).map_err(|e| format!("Failed to write temp file: {}", e))?;
 
     // Run with appropriate interpreter
     let result = match interpreter {
-        "chicken" | "csi" => {
-            Command::new("csi")
-                .arg("-q")
-                .arg("-b")
-                .arg(&temp_file)
-                .stdout(Stdio::inherit())
-                .stderr(Stdio::inherit())
-                .status()
-        }
-        "gsi" => {
-            Command::new("gsi")
-                .arg("-:d-")
-                .arg(&temp_file)
-                .stdout(Stdio::inherit())
-                .stderr(Stdio::inherit())
-                .status()
-        }
+        "chicken" | "csi" => Command::new("csi")
+            .arg("-q")
+            .arg("-b")
+            .arg(&temp_file)
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .status(),
+        "gsi" => Command::new("gsi")
+            .arg("-:d-")
+            .arg(&temp_file)
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .status(),
         "ribbit" => {
             return run_ribbit(&temp_file);
         }

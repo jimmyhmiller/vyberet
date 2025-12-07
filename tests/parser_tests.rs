@@ -1853,7 +1853,10 @@ fn test_mixed_operators_plus_times() {
     let result = parse_expr("2 + 3 * 4");
     assert!(result.is_err(), "Should fail: mixing + and *");
     let err_msg = format!("{:?}", result.unwrap_err());
-    assert!(err_msg.contains("MixedBinops"), "Expected MixedBinops error");
+    assert!(
+        err_msg.contains("MixedBinops"),
+        "Expected MixedBinops error"
+    );
     assert!(err_msg.contains("+"), "Error should mention + operator");
     assert!(err_msg.contains("*"), "Error should mention * operator");
 }
