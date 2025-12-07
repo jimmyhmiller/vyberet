@@ -145,6 +145,16 @@ fn compile_and_run_with_checks(file_path: &str) -> String {
                 );
             }
 
+            // Verify C file was created
+            if !c_file.exists() {
+                panic!(
+                    "Ribbit compilation succeeded but C file not created at {:?}\nstdout: {}\nstderr: {}",
+                    c_file,
+                    String::from_utf8_lossy(&rsc_output.stdout),
+                    String::from_utf8_lossy(&rsc_output.stderr)
+                );
+            }
+
             // Compile C to executable
             let gcc_output = Command::new("gcc")
                 .arg(&c_file)

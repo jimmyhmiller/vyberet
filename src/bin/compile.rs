@@ -1,11 +1,8 @@
-use pyret_attempt2::codegen::{Backend, SchemeCompiler};
 use pyret_attempt2::module_compiler::ModuleCompiler;
-use pyret_attempt2::tokenizer::Tokenizer;
-use pyret_attempt2::{FileRegistry, Parser};
 use std::env;
 use std::fs;
 use std::path::Path;
-use std::process::{self, Command, Stdio};
+use std::process::{Command, Stdio};
 
 #[derive(Debug)]
 struct Options {

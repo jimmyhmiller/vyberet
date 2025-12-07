@@ -3,11 +3,11 @@
 //! Handles dependency resolution, topological sorting, and compilation
 //! of Pyret programs with imports.
 
-use crate::ast::{Import, ImportType, Name, Program, Provide};
+use crate::ast::{Import, ImportType, Program};
 use crate::codegen::SchemeCompiler;
 use crate::tokenizer::Tokenizer;
 use crate::{FileRegistry, Parser};
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;

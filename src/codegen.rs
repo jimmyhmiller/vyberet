@@ -36,7 +36,8 @@ struct VariantInfo {
 /// Information about a data type's methods
 #[derive(Debug, Clone)]
 struct DataTypeInfo {
-    variants: Vec<String>,    // Names of all variants for this data type
+    #[allow(dead_code)]
+    variants: Vec<String>, // Names of all variants for this data type
     methods: HashSet<String>, // Names of all methods defined on this data type
 }
 
@@ -107,6 +108,7 @@ impl ModuleUri {
 
 /// Module information tracked during compilation
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct ModuleInfo {
     uri: ModuleUri,
     /// What names this module provides/exports
@@ -315,7 +317,7 @@ impl SchemeCompiler {
 
     /// Process import statements and register them
     fn process_imports(&mut self, imports: &[Import]) -> Result<(), String> {
-        use crate::ast::{Import, ImportType, Name};
+        use crate::ast::{Import, Name};
 
         for import in imports {
             match import {
@@ -409,7 +411,7 @@ impl SchemeCompiler {
                 // Provide nothing
                 Ok(())
             }
-            Provide::SProvide { block, .. } => {
+            Provide::SProvide { .. } => {
                 // Specific provides - would need to parse the block
                 // For now, treat as provide-all
                 Ok(())
